@@ -1,5 +1,5 @@
 use super::{TestRunner, TestAdaptor, TestMetadata};
-use super::{Instruction, TestAssert, UIOp, Feedback};
+use super::{Instruction, TestAssert, TestOp, Feedback};
 
 /// Harness which runs one or more tests
 pub struct TestHarness<R: TestRunner, A: TestAdaptor> {
@@ -21,7 +21,7 @@ impl<R: TestRunner, A: TestAdaptor> TestHarness<R, A> {
         Feedback::Success
     }
 
-    fn translate_ui_op(&self, _op: UIOp) -> Feedback {
+    fn translate_ui_op(&self, _op: TestOp) -> Feedback {
         // TODO
         Feedback::Success
     }
@@ -29,7 +29,7 @@ impl<R: TestRunner, A: TestAdaptor> TestHarness<R, A> {
     fn translate_instruction(&self, instruction: Instruction) -> Feedback {
         match instruction {
             Instruction::Assertion(a) => self.translate_assertion(a),
-            Instruction::Interaction(i) => self.translate_ui_op(i),
+            Instruction::Operation(i) => self.translate_ui_op(i),
         }
     }
 

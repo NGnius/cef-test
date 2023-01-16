@@ -8,6 +8,8 @@ pub enum Feedback {
     AssertFailure,
     /// Last instruction raised an error
     Error,
+    /// Last instruction was not supported by adaptor
+    Unsupported,
 }
 
 impl Feedback {
