@@ -37,9 +37,11 @@ impl WebContent {
     /// Retrieve WebContent information from CEF instance
     #[allow(clippy::result_large_err)]
     pub fn load_all(domain_name: &str, port: u16) -> Result<Vec<Self>, ureq::Error> {
-        Ok(ureq::get(&format!("http://{}:{}/json", domain_name, port))
+        let web_contents = ureq::get(&format!("http://{}:{}/json", domain_name, port))
             .call()?
-            .into_json()?)
+            .into_json()?;
+        log::debug!("Got WebContent json: {:?}", web_contents);
+        Ok(web_contents)
     }
 }
 

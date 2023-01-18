@@ -1,3 +1,4 @@
 **/target
 *.log
-*.tjson
+*.test.json
+*.json

@@ -7,14 +7,14 @@ use clap::Parser;
 pub struct Cli {
     /// CEF DevTools port
     #[arg(short, long)]
-    port: Option<u16>,
+    pub port: Option<u16>,
 
     /// CEF DevTools IP address or domain
     #[arg(short, long)]
-    address: Option<String>,
+    pub address: Option<String>,
 
     /// Test file(s)
-    test: Vec<PathBuf>,
+    pub test: Vec<PathBuf>,
 }
 
 impl Cli {

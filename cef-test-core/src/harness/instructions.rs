@@ -50,6 +50,14 @@ pub enum ElementSelector {
     CSS(String),
 }
 
+impl std::fmt::Display for ElementSelector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CSS(pattern) => write!(f, "Element[css~`{}`]", pattern),
+        }
+    }
+}
+
 /// Tab selection mode
 pub enum TabSelector {
     /// Select by tab title
@@ -58,6 +66,16 @@ pub enum TabSelector {
     Url(String),
     /// Select by tab identifier
     Id(String),
+}
+
+impl std::fmt::Display for TabSelector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Title(title) => write!(f, "Tab[title==`{}`]", title),
+            Self::Url(url) => write!(f, "Tab[url==`{}`]", url),
+            Self::Id(id) => write!(f, "Tab[id==`{}`]", id),
+        }
+    }
 }
 
 /// Test operation information
@@ -72,12 +90,14 @@ pub enum GeneralOpType {
 pub enum BasicOpType {
     /// Pause executing thread for time, in milliseconds
     Sleep(u64),
+    /// Execute Javascript in the global tab context
+    Evaluate(String),
 }
 
 /// Element manipulation operation
 pub struct ElementOp {
     /// Element to target
-    pub element: ElementSelector,
+    pub context: ElementSelector,
     /// Operation to perform
     pub op: ElementOpType,
 }
@@ -88,5 +108,9 @@ pub enum ElementOpType {
     Click,
     /// Wait for element to be created
     WaitFor,
+    /// Focus the element
+    Focus,
+    /// Scroll the element into view
+    ScrollTo,
 }
 

@@ -1,13 +1,13 @@
-use super::{TestRunner, TestAdaptor, TestMetadata};
-use super::{Instruction, TestAssert, TestOp, Feedback};
+use super::{TestRunner, TestAdapter, TestMetadata};
+use super::{Instruction, TestAssert, TestOp, Feedback, GeneralOpType, ElementOpType, BasicOpType};
 
 /// Harness which runs one or more tests
-pub struct TestHarness<R: TestRunner, A: TestAdaptor> {
+pub struct TestHarness<R: TestRunner, A: TestAdapter> {
     tests: Vec<R>,
     adaptor: A,
 }
 
-impl<R: TestRunner, A: TestAdaptor> TestHarness<R, A> {
+impl<R: TestRunner, A: TestAdapter> TestHarness<R, A> {
     /// Construct a new test harness
     pub fn new(adaptor: A, tests: Vec<R>) -> Self {
         Self {
@@ -16,17 +16,28 @@ impl<R: TestRunner, A: TestAdaptor> TestHarness<R, A> {
         }
     }
 
-    fn translate_assertion(&self, _assertion: TestAssert) -> Feedback {
+    fn translate_assertion(&mut self, _assertion: TestAssert) -> Feedback {
         // TODO
         Feedback::Success
     }
 
-    fn translate_ui_op(&self, _op: TestOp) -> Feedback {
+    fn translate_ui_op(&mut self, op: TestOp) -> Feedback {
         // TODO
-        Feedback::Success
+        match op.op {
+            GeneralOpType::Element(elem) => {
+                match elem.op {
+                    ElementOpType::Click => self.adaptor.element_click(&op.context, &elem.context),
+                    ElementOpType::WaitFor => self.adaptor.element_wait(&op.context, &elem.context),
+                    ElementOpType::Focus => self.adaptor.element_focus(&op.context, &elem.context),
+                    ElementOpType::ScrollTo => self.adaptor.element_scroll_to(&op.context, &elem.context),
+                }
+            },
+            GeneralOpType::Basic(BasicOpType::Sleep(ms)) => self.adaptor.wait(&op.context, ms),
+            GeneralOpType::Basic(BasicOpType::Evaluate(js)) => self.adaptor.evaluate(&op.context, &js),
+        }
     }
 
-    fn translate_instruction(&self, instruction: Instruction) -> Feedback {
+    fn translate_instruction(&mut self, instruction: Instruction) -> Feedback {
         match instruction {
             Instruction::Assertion(a) => self.translate_assertion(a),
             Instruction::Operation(i) => self.translate_ui_op(i),
@@ -35,7 +46,6 @@ impl<R: TestRunner, A: TestAdaptor> TestHarness<R, A> {
 
     /// Perform the tests
     pub fn execute(mut self) -> Result<A, Vec<TestMetadata>> {
-        // TODO
         let tests: Vec<R> = self.tests.drain(..).collect();
         let mut failures = Vec::with_capacity(tests.len());
         for mut test in tests {
