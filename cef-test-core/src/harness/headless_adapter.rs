@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use regex::Regex;
 use headless_chrome::{Browser, Tab, Element};
 
 use crate::cef::WebContent;
@@ -29,7 +30,7 @@ impl HeadlessAdapter {
                 conn_map.insert(web_contents[0].title().to_owned(), browser);
             }
         }
-        //std::thread::sleep(std::time::Duration::from_millis(1_000));
+        std::thread::sleep(std::time::Duration::from_millis(1_000));
         log::info!("HeadlessAdapter ready");
         Ok(Self {
             web_content: web_contents,
@@ -43,8 +44,7 @@ impl HeadlessAdapter {
         if let Some(browser) = self.connections.get(title) {
             for tab in browser.get_tabs().lock().map_err(|e| format!("{}", e))?.iter() {
                 if let Ok(info) = tab.get_target_info() {
-                    dbg!(&info.title, title == &info.title);
-                    if title == &info.title {
+                    if info.title == title {
                         return Ok(Some(tab.clone()));
                     }
                 }
@@ -57,7 +57,15 @@ impl HeadlessAdapter {
         for web_content in self.web_content.iter() {
             let is_match = match tab_select {
                 TabSelector::Title(title) => title == web_content.title(),
+                TabSelector::TitleRegex(pattern) => {
+                    let pattern = Regex::new(pattern).map_err(|x| x.to_string())?;
+                    pattern.is_match(web_content.title())
+                },
                 TabSelector::Url(url) => url == web_content.url(),
+                TabSelector::UrlRegex(pattern) => {
+                    let pattern = Regex::new(pattern).map_err(|x| x.to_string())?;
+                    pattern.is_match(web_content.url())
+                },
                 TabSelector::Id(id) => id == web_content.id(),
             };
             if is_match {
@@ -81,6 +89,14 @@ impl HeadlessAdapter {
                             || info.browser_context_id.map(|ctx_id| &ctx_id == id).unwrap_or(false)
                         },
                         TabSelector::Title(title) => title == &info.title,
+                        TabSelector::TitleRegex(pattern) => {
+                            let pattern = Regex::new(pattern).map_err(|x| x.to_string())?;
+                            pattern.is_match(&info.title)
+                        },
+                        TabSelector::UrlRegex(pattern) => {
+                            let pattern = Regex::new(pattern).map_err(|x| x.to_string())?;
+                            pattern.is_match(&info.url)
+                        },
                     };
                     if is_match {
                         return Ok(Some(tab.clone()));
@@ -136,7 +152,7 @@ impl TestAdapter for HeadlessAdapter {
     fn element_click(&mut self, tab_s: &TabSelector, element_s: &ElementSelector) -> Feedback {
         // TODO better feedback
         if let Some(tab) = self.select_tab(tab_s, true) {
-            if let Some(element) = self.select_element(&tab, element_s) {
+            /*if let Some(element) = self.select_element(&tab, element_s) {
                 match element.click() {
                     Ok(_) => Feedback::Success,
                     Err(e) => {
@@ -147,6 +163,17 @@ impl TestAdapter for HeadlessAdapter {
             } else {
                 log::error!("Failed to find element {}", element_s);
                 Feedback::Error
+            }*/
+            // FIXME element.click() doesn't actually click
+            let result = match element_s {
+                ElementSelector::CSS(css) => tab.evaluate(&format!("document.querySelector(\"{}\").click()", css), true),
+            };
+            match result {
+                Ok(_) => Feedback::Success,
+                Err(e) => {
+                    log::error!("Failed to click on element {}: {}", element_s, e);
+                    Feedback::Error
+                }
             }
         } else {
             log::error!("Failed to find tab {}", tab_s);
@@ -212,6 +239,51 @@ impl TestAdapter for HeadlessAdapter {
         }
     }
 
+    fn element_value(&mut self, tab_s: &TabSelector, element_s: &ElementSelector) -> Feedback {
+        if let Some(tab) = self.select_tab(tab_s, true) {
+            if let Some(element) = self.select_element(&tab, element_s) {
+                match element.get_inner_text() {
+                    Ok(t) => Feedback::Value(t.into()),
+                    Err(e) => {
+                        log::error!("Failed to get inner text value of element {}: {}", element_s, e);
+                        Feedback::Error
+                    }
+                }
+            } else {
+                log::error!("Failed to find element {}", element_s);
+                Feedback::Error
+            }
+        } else {
+            log::error!("Failed to find tab {}", tab_s);
+            Feedback::Error
+        }
+    }
+
+    fn element_attribute(&mut self, tab_s: &TabSelector, element_s: &ElementSelector, _attribute: &str) -> Feedback {
+        if let Some(tab) = self.select_tab(tab_s, true) {
+            if let Some(element) = self.select_element(&tab, element_s) {
+                match element.get_attributes() {
+                    Ok(Some(_attrs)) => {
+                        // TODO
+                        //attrs.get(attribute).map(|x| x.into()).unwrap_or(serde_json::Value::Null)
+                        Feedback::Unsupported
+                    },
+                    Ok(None) => Feedback::Value(serde_json::Value::Null),
+                    Err(e) => {
+                        log::error!("Failed to get attributes of element {}: {}", element_s, e);
+                        Feedback::Error
+                    }
+                }
+            } else {
+                log::error!("Failed to find element {}", element_s);
+                Feedback::Error
+            }
+        } else {
+            log::error!("Failed to find tab {}", tab_s);
+            Feedback::Error
+        }
+    }
+
     fn wait(&mut self, tab_s: &TabSelector, milliseconds: u64) -> Feedback {
         // TODO better feedback
         if let Some(_tab) = self.select_tab(tab_s, true) {
@@ -227,7 +299,7 @@ impl TestAdapter for HeadlessAdapter {
     fn evaluate(&mut self, tab_s: &TabSelector, script: &str) -> Feedback {
         if let Some(tab) = self.select_tab(tab_s, true) {
             match tab.evaluate(script, true) {
-                Ok(_) => Feedback::Success,
+                Ok(result) => Feedback::Value(result.value.unwrap_or(serde_json::Value::Null)),
                 Err(e) => {
                     log::error!("Failed to evaluate script on tab {}: {}", tab_s, e);
                     Feedback::Error

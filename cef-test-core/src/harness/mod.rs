@@ -13,6 +13,6 @@ pub use adapter::TestAdapter;
 pub use feedback::Feedback;
 pub use harness::TestHarness;
 pub use headless_adapter::HeadlessAdapter;
-pub use instructions::{Instruction, TestAssert, GeneralAssertType, ElementAssert, ElementAssertionType, TestOp, ElementSelector, TabSelector, GeneralOpType, BasicOpType, ElementOp, ElementOpType};
+pub use instructions::{Instruction, TestAssert, GeneralAssertType, ElementAssert, ElementAssertionType, TestOp, ElementSelector, TabSelector, GeneralOpType, TabOpType, ElementOp, ElementOpType, TabAssert, Comparison};
 pub use json_runner::JsonRunner;
 pub use runner::{TestRunner, TestMetadata};

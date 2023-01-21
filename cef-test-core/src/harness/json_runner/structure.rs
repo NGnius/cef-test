@@ -2,7 +2,7 @@ use std::convert::From;
 use serde::{Deserialize, Serialize};
 
 use super::super::TestMetadata;
-use super::super::{TabSelector, ElementSelector, ElementOpType, ElementOp, BasicOpType, GeneralOpType, GeneralAssertType, ElementAssert, ElementAssertionType, Instruction, TestAssert, TestOp};
+use super::super::{TabSelector, ElementSelector, ElementOpType, ElementOp, TabOpType, GeneralOpType, GeneralAssertType, ElementAssert, ElementAssertionType, Instruction, TestAssert, TestOp, Comparison, /*TabAssert*/};
 
 /// Test descriptor
 #[derive(Serialize, Deserialize, Debug)]
@@ -63,8 +63,8 @@ pub enum TabDescriptor {
 impl From<TabDescriptor> for TabSelector {
     fn from(value: TabDescriptor) -> Self {
         match value {
-            TabDescriptor::Title{title: t} => Self::Title(t),
-            TabDescriptor::Url{url: u} => Self::Url(u),
+            TabDescriptor::Title{title: t} => Self::TitleRegex(t),
+            TabDescriptor::Url{url: u} => Self::UrlRegex(u),
             TabDescriptor::Id{id: i} => Self::Id(i),
         }
     }
@@ -84,9 +84,13 @@ pub enum TestInstruction {
     Eval {
         /// Javascript to execute
         code: String,
+        /*
+        /// Result assertion
+        assert: Option<Comparison>,
+        */
     },
     /// Assertion on an element
-    Assert(TestAssertionInstruction),
+    Assert(TestElementAssertion),
 }
 
 impl TestInstruction {
@@ -99,11 +103,11 @@ impl TestInstruction {
             }),
             TestInstruction::Sleep { milliseconds } => Instruction::Operation(TestOp {
                 context: selector,
-                op: GeneralOpType::Basic(BasicOpType::Sleep(milliseconds)),
+                op: GeneralOpType::Tab(TabOpType::Sleep(milliseconds)),
             }),
             TestInstruction::Eval { code } => Instruction::Operation(TestOp {
                 context: selector,
-                op: GeneralOpType::Basic(BasicOpType::Evaluate(code)),
+                op: GeneralOpType::Tab(TabOpType::Evaluate(code)),
             }),
             TestInstruction::Assert(assertion) => Instruction::Assertion(TestAssert {
                 context: selector,
@@ -131,13 +135,13 @@ impl From<TestElementInstruction> for ElementOp {
 
 /// Test element instruction
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TestAssertionInstruction {
+pub struct TestElementAssertion {
     pub element: ElementDescriptor,
     pub assert: ElementAssertion,
 }
 
-impl From<TestAssertionInstruction> for ElementAssert {
-    fn from(value: TestAssertionInstruction) -> Self {
+impl From<TestElementAssertion> for ElementAssert {
+    fn from(value: TestElementAssertion) -> Self {
         Self {
             element: value.element.into(),
             assert: value.assert.into(),
@@ -148,6 +152,7 @@ impl From<TestAssertionInstruction> for ElementAssert {
 /// Element descriptor
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "by")]
+#[allow(clippy::upper_case_acronyms)]
 pub enum ElementDescriptor {
     /// Use CSS selector syntax
     CSS{css: String},
@@ -190,15 +195,18 @@ impl From<ElementInteraction> for ElementOpType {
 pub enum ElementAssertion {
     /// Assert element exists
     Exists,
+    /// Assert element value equals text
+    TextEquals(String),
     /// Assert element contains text
-    TextEquals(String)
+    TextContains(String),
 }
 
 impl From<ElementAssertion> for ElementAssertionType {
     fn from(value: ElementAssertion) -> Self {
         match value {
-            ElementAssertion::Exists => Self::Exists,
-            ElementAssertion::TextEquals(t) => Self::TextEquals(t),
+            ElementAssertion::Exists => Self::Value(Comparison::Exists),
+            ElementAssertion::TextEquals(t) => Self::Value(Comparison::TextEquals(t)),
+            ElementAssertion::TextContains(t) => Self::Value(Comparison::TextContains(t)),
         }
     }
 }

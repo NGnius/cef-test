@@ -40,6 +40,7 @@ impl TestRunner for JsonRunner {
         if matches!(fail_mode, FailureMode::FastFail) && !feedback.is_ok() {
             return None;
         }
+        #[allow(clippy::never_loop)]
         'step_loop: while self.step_i < self.test_data.test.len() {
             let step = &self.test_data.test[self.step_i];
             'op_loop: while self.op_i < step.operations.len() {
@@ -59,7 +60,6 @@ impl TestRunner for JsonRunner {
             self.op_i = 0;
             self.step_i += 1;
         }
-        //log::error!("JsonRunner.next(...) is UNIMPLEMENTED!");
         None
     }
 

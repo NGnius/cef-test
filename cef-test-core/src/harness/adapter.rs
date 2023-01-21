@@ -15,6 +15,12 @@ pub trait TestAdapter {
     /// Scroll to element in tab
     fn element_scroll_to(&mut self, tab: &TabSelector, element: &ElementSelector) -> Feedback;
 
+    /// Retrieve text in element in tab
+    fn element_value(&mut self, tab: &TabSelector, element: &ElementSelector) -> Feedback;
+
+    /// Retrieve text in element in tab
+    fn element_attribute(&mut self, tab: &TabSelector, element: &ElementSelector, attribute: &str) -> Feedback;
+
     /// Pause execution in tab for a period
     fn wait(&mut self, tab: &TabSelector, milliseconds: u64) -> Feedback;
 

@@ -4,6 +4,8 @@ pub enum Feedback {
     Start,
     /// Last instruction was successful
     Success,
+    /// Last instruction returned a value
+    Value(serde_json::Value),
     /// Last instruction was an assertion and it failed
     AssertFailure,
     /// Last instruction raised an error
@@ -18,6 +20,7 @@ impl Feedback {
         match self {
             Self::Success => true,
             Self::Start => true,
+            Self::Value(_) => true,
             _ => false,
         }
     }
@@ -26,6 +29,16 @@ impl Feedback {
     pub fn is_err(&self) -> bool {
         match self {
             Self::Error => true,
+            _ => false,
+        }
+    }
+
+    /// Feedback is indicative of a failing test
+    pub fn is_fail(&self) -> bool {
+        match self {
+            Self::AssertFailure => true,
+            Self::Error => true,
+            Self::Unsupported => true,
             _ => false,
         }
     }
