@@ -8,7 +8,7 @@ use super::super::{TabSelector, ElementSelector, ElementOpType, ElementOp, TabOp
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Test {
     pub(super) info: TestInfo,
-    pub(super) test: Vec<TestStep>,
+    pub(super) test: Vec<TestStepType>,
 }
 
 /// Test metadata
@@ -41,7 +41,18 @@ impl std::convert::From<TestInfo> for TestMetadata {
     }
 }
 
-/// Test step
+/// Test Step type
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum TestStepType {
+    Regular(TestStep),
+    Macro {
+        name: String,
+        file: std::path::PathBuf,
+    }
+}
+
+/// Regular test step
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TestStep {
     pub tab: TabDescriptor,

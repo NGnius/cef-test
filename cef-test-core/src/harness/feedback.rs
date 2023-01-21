@@ -1,4 +1,5 @@
 /// Harness information for a test runner
+#[derive(Clone)]
 pub enum Feedback {
     /// Start of run (no feedback to provide)
     Start,
